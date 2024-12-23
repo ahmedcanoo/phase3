@@ -1,104 +1,89 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: phase-3-new-git-deployment
+  name: back-end2-00001-deployment
   namespace: ahmedcano-dev
   labels:
-    app: phase-3-new-git
+    app: back-end2
+    app.kubernetes.io/component: back-end2
+    app.kubernetes.io/instance: back-end2
+    app.kubernetes.io/part-of: phase-3-git-app
   annotations:
     autoscaling.knative.dev/target: "100"
     autoscaling.knative.dev/target-utilization-percentage: "70"
-    autoscaling.knative.dev/window: 60s
+    autoscaling.knative.dev/window: "60s"
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: phase-3-new-git
+      app: back-end2
   template:
     metadata:
       labels:
-        app: phase-3-new-git
+        app: back-end2
+        app.kubernetes.io/component: back-end2
     spec:
-      containers:
-        - name: phase-3-new-git
-          image: image-registry.openshift-image-registry.svc:5000/ahmedcano-dev/phase-3-new-git@sha256:69a9b25e14226f0a271873f9921fb41e5a5c5d512c1dc1cd33a28694448d968a
-          ports:
-            - containerPort: 8080
-              name: user-port
-          env:
-            - name: PORT
-              value: "8080"
-            - name: K_REVISION
-              value: "phase-3-new-git-00001"
-            - name: K_CONFIGURATION
-              value: "phase-3-new-git"
-            - name: K_SERVICE
-              value: "phase-3-new-git"
-          lifecycle:
-            preStop:
-              httpGet:
-                path: /wait-for-drain
-                port: 8022
-                scheme: HTTP
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "256Mi"
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8080
-            initialDelaySeconds: 3
-            periodSeconds: 10
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          imagePullPolicy: Always
-        - name: queue-proxy
-          image: registry.redhat.io/openshift-serverless-1/serving-queue-rhel8@sha256:a5950f81cbc64d1edb64ae7f7f120c3435d36afcd14ffc34ae522af297d87e1e
-          ports:
-            - containerPort: 8012
-              name: queue-port
-            - containerPort: 8112
-              name: https-port
-          env:
-            - name: USER_PORT
-              value: "8080"
-            - name: SERVING_NAMESPACE
-              value: ahmedcano-dev
-            - name: SERVING_SERVICE
-              value: phase-3-new-git
-            - name: SERVING_CONFIGURATION
-              value: phase-3-new-git
-            - name: SERVING_REVISION
-              value: phase-3-new-git-00001
-            - name: QUEUE_SERVING_PORT
-              value: "8012"
-            - name: QUEUE_SERVING_TLS_PORT
-              value: "8112"
-            - name: CONTAINER_CONCURRENCY
-              value: "0"
-            - name: ENABLE_HTTP_FULL_DUPLEX
-              value: "false"
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 8012
-            initialDelaySeconds: 3
-            periodSeconds: 10
-            timeoutSeconds: 5
-            successThreshold: 1
-            failureThreshold: 3
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "256Mi"
-          imagePullPolicy: IfNotPresent
-      restartPolicy: Always
-      terminationGracePeriodSeconds: 300
+  containers:
+    - name: back-end2
+      imagePullPolicy: Always
+      image: image-registry.openshift-image-registry.svc:5000/ahmedcano-dev/back-end2:latest
+      ports:
+        - containerPort: 8001
+          name: http
+      env:
+        - name: MONGO_URI
+          value: "mongodb://mongodb:27017"
+        - name: PORT
+          value: "8001"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8001
+        initialDelaySeconds: 5
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
+    - name: queue-proxy
+      image: registry.redhat.io/openshift-serverless-1/serving-queue-rhel8:latest
+      ports:
+        - containerPort: 8012
+          name: queue-port
+      env:
+        - name: USER_PORT
+          value: "8001"
+        - name: SERVING_NAMESPACE
+          value: ahmedcano-dev
+        - name: SERVING_SERVICE
+          value: back-end2
+        - name: SERVING_CONFIGURATION
+          value: back-end2
+        - name: SERVING_REVISION
+          value: back-end2-00001
+        - name: QUEUE_SERVING_PORT
+          value: "8012"
+        - name: ENABLE_HTTP_FULL_DUPLEX
+          value: "false"
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8012
+        initialDelaySeconds: 3
+        periodSeconds: 10
+        timeoutSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
