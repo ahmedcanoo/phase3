@@ -126,31 +126,43 @@ func InsertAdminUser() {
 }
 
 func RegisterUser(w http.ResponseWriter, r *http.Request) {
+	log.Println("Starting RegisterUser function...")
+	
 	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
+		log.Printf("Error decoding user input: %v", err)
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
 	collection := client.Database("myapp").Collection("users")
+	log.Println("Connected to MongoDB and selected 'users' collection.")
 
 	var existingUser User
 	err = collection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&existingUser)
 	if err == nil {
+		log.Printf("User with email %s already exists.", user.Email)
 		http.Error(w, "User already exists", http.StatusConflict)
+		return
+	} else if err != mongo.ErrNoDocuments {
+		log.Printf("Error checking for existing user: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	_, err = collection.InsertOne(context.TODO(), user)
 	if err != nil {
+		log.Printf("Error inserting new user into database: %v", err)
 		http.Error(w, "Failed to register user", http.StatusInternalServerError)
 		return
 	}
 
+	log.Printf("User %s registered successfully.", user.Email)
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode("User registered successfully")
 }
+
 
 func GetUsers(w http.ResponseWriter, r *http.Request) {
 	collection := client.Database("myapp").Collection("users")
